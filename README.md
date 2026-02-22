@@ -3,7 +3,7 @@
 ![logo](https://github.com/Druidblack/Jellyfin.Plugin.ActorPlus/blob/main/images/logo.jpg)
 
 The plugin adds additional information to the actor's portrait and, when hovering over it with the cursor, the filmography. The plugin also shows a list of actors when you hover over the movie (TV series) poster.
-
+Data about actors is cached, so the plugin does not load jellyfin with unnecessary requests.
 ```
 https://raw.githubusercontent.com/Druidblack/Jellyfin.Plugin.ActorPlus/main/manifest.json
 ```
