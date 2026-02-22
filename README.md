@@ -5,7 +5,7 @@
 The plugin adds additional information to the actor's portrait and, when hovering over it with the cursor, the filmography. The plugin also shows a list of actors when you hover over the movie (TV series) poster.
 
 ```
-https://raw.githubusercontent.com/Druidblack/Jellyfin.Plugin.MDBList_Ratings/main/manifest.json
+https://raw.githubusercontent.com/Druidblack/Jellyfin.Plugin.ActorPlus/main/manifest.json
 ```
 
 To work with the plugin, you need to install [File Transformation](https://github.com/IAmParadox27/jellyfin-plugin-file-transformation)
