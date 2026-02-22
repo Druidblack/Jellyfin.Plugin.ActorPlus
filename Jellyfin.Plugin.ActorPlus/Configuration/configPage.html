@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Actor Plus</title>
+</head>
+<body>
+  <div id="ActorPlusConfigPage"
+       data-role="page"
+       class="page type-interior pluginConfigurationPage"
+       data-require="emby-input,emby-button,emby-checkbox">
+
+    <div data-role="content">
+      <div class="content-primary">
+        <form id="ActorPlusConfigForm">
+
+          <div class="checkboxContainer checkboxContainer-withDescripton">
+            <label class="emby-checkbox-label">
+              <input id="EnableOverlay" name="EnableOverlay" type="checkbox" is="emby-checkbox" />
+              <span>Enable overlays on actor portraits (Jellyfin Web)</span>
+            </label>
+</div>
+
+          <div class="checkboxContainer checkboxContainer-withDescripton">
+            <label class="emby-checkbox-label">
+              <input id="InjectWebClientAssets" name="InjectWebClientAssets" type="checkbox" is="emby-checkbox" />
+              <span>Auto-inject script/styles into Jellyfin Web (patch index.html)</span>
+            </label>
+</div>
+
+          <!-- TMDB options hidden by request (kept for backward compatibility with existing configs) -->
+          <div class="checkboxContainer checkboxContainer-withDescripton" style="display:none">
+            <label class="emby-checkbox-label">
+              <input id="UseTmdbFallback" name="UseTmdbFallback" type="checkbox" is="emby-checkbox" />
+              <span>If birth date is missing, try TMDB fallback (by TMDB id)</span>
+            </label>
+          </div>
+
+          <div class="inputContainer" style="display:none">
+            <label class="inputLabel inputLabelUnfocused" for="TmdbApiKey">TMDB API Key (v3)</label>
+            <input id="TmdbApiKey" name="TmdbApiKey" type="password" is="emby-input" autocomplete="off" />
+</div>
+
+          <div class="inputContainer" style="display:none">
+            <label class="inputLabel inputLabelUnfocused" for="CacheTtlDays">Cache TTL (days)</label>
+            <input id="CacheTtlDays" name="CacheTtlDays" type="number" is="emby-input" min="1" max="3650" />
+</div>
+
+          <div class="checkboxContainer checkboxContainer-withDescripton">
+            <label class="emby-checkbox-label">
+              <input id="ShowAgeAtDeath" name="ShowAgeAtDeath" type="checkbox" is="emby-checkbox" />
+              <span>Show age at death (if death date is known)</span>
+            </label>
+          </div>
+
+          <div class="checkboxContainer checkboxContainer-withDescripton">
+            <label class="emby-checkbox-label">
+              <input id="ShowDeceasedOverlay" name="ShowDeceasedOverlay" type="checkbox" is="emby-checkbox" />
+              <span>Show ✝ and gray portrait if the actor is deceased</span>
+            </label>
+          </div>
+
+          <div class="checkboxContainer checkboxContainer-withDescripton">
+            <label class="emby-checkbox-label">
+              <input id="ShowAgeAtRelease" name="ShowAgeAtRelease" type="checkbox" is="emby-checkbox" />
+              <span>Show age at release of the movie/series</span>
+            </label>
+</div>
+
+          <div class="checkboxContainer checkboxContainer-withDescripton">
+            <label class="emby-checkbox-label">
+              <input id="ShowAgeIcons" name="ShowAgeIcons" type="checkbox" is="emby-checkbox" />
+              <span>Show 🎂/🎬 icons next to ages</span>
+            </label>
+</div>
+
+          <div class="checkboxContainer checkboxContainer-withDescripton">
+            <label class="emby-checkbox-label">
+              <input id="EnableHoverFilmography" name="EnableHoverFilmography" type="checkbox" is="emby-checkbox" />
+              <span>Show filmography on actor hover (popup)</span>
+            </label>
+</div>
+
+          <div class="inputContainer">
+            <label class="inputLabel inputLabelUnfocused" for="HoverFilmographyLimit">Filmography items limit (N)</label>
+            <input id="HoverFilmographyLimit" name="HoverFilmographyLimit" type="number" min="1" max="100" step="1" is="emby-input" />
+</div>
+
+          <div class="checkboxContainer checkboxContainer-withDescripton">
+            <label class="emby-checkbox-label">
+              <input id="RandomizeHoverFilmography" name="RandomizeHoverFilmography" type="checkbox" is="emby-checkbox" />
+              <span>Randomize filmography on each hover (only if more than N)</span>
+            </label>
+</div>
+
+          <div class="checkboxContainer checkboxContainer-withDescripton">
+            <label class="emby-checkbox-label">
+              <input id="EnableHoverCastMenu" name="EnableHoverCastMenu" type="checkbox" is="emby-checkbox" />
+              <span>Show cast on movie/series poster hover (popup)</span>
+            </label>
+</div>
+
+          <div class="inputContainer">
+            <label class="inputLabel inputLabelUnfocused" for="HoverCastLimit">Cast items limit (N)</label>
+            <input id="HoverCastLimit" name="HoverCastLimit" type="number" min="1" max="100" step="1" is="emby-input" />
+</div>
+
+<div class="checkboxContainer checkboxContainer-withDescripton">
+            <label class="emby-checkbox-label">
+              <input id="ShowBirthCountryFlag" name="ShowBirthCountryFlag" type="checkbox" is="emby-checkbox" />
+              <span>Show birth country flag (bottom-left)</span>
+            </label>
+</div>
+
+          <div class="checkboxContainer checkboxContainer-withDescripton">
+            <label class="emby-checkbox-label">
+              <input id="ShowBirthPlaceText" name="ShowBirthPlaceText" type="checkbox" is="emby-checkbox" />
+              <span>Show birthplace text next to flag (bottom-left)</span>
+            </label>
+</div>
+
+          <div>
+            <button is="emby-button" type="submit" class="raised button-submit block emby-button">
+              <span>Save</span>
+            </button>
+          </div>
+
+        </form>
+      </div>
+    </div>
+
+    <script type="text/javascript">
+      var ActorPlusConfig = {
+        pluginUniqueId: 'd47f75a1-2c4c-4aa1-a1cd-5da6e5e6ccfd'
+      };
+
+      function loadConfig() {
+        Dashboard.showLoadingMsg();
+        ApiClient.getPluginConfiguration(ActorPlusConfig.pluginUniqueId).then(function (config) {
+          document.getElementById('EnableOverlay').checked = !!config.EnableOverlay;
+          document.getElementById('InjectWebClientAssets').checked = !!config.InjectWebClientAssets;
+          document.getElementById('UseTmdbFallback').checked = !!config.UseTmdbFallback;
+          document.getElementById('TmdbApiKey').value = config.TmdbApiKey || '';
+          document.getElementById('CacheTtlDays').value = (config.CacheTtlDays ?? 30);
+          document.getElementById('ShowAgeAtDeath').checked = (config.ShowAgeAtDeath ?? true);
+          document.getElementById('ShowDeceasedOverlay').checked = (config.ShowDeceasedOverlay ?? false);
+          document.getElementById('ShowAgeAtRelease').checked = (config.ShowAgeAtRelease ?? true);
+          document.getElementById('ShowAgeIcons').checked = (config.ShowAgeIcons ?? false);
+          document.getElementById('ShowBirthCountryFlag').checked = (config.ShowBirthCountryFlag ?? true);
+          document.getElementById('ShowBirthPlaceText').checked = (config.ShowBirthPlaceText ?? false);
+          document.getElementById('EnableHoverFilmography').checked = (config.EnableHoverFilmography ?? false);
+          document.getElementById('HoverFilmographyLimit').value = (config.HoverFilmographyLimit ?? 12);
+          document.getElementById('RandomizeHoverFilmography').checked = (config.RandomizeHoverFilmography ?? false);
+          document.getElementById('EnableHoverCastMenu').checked = (config.EnableHoverCastMenu ?? false);
+          document.getElementById('HoverCastLimit').value = (config.HoverCastLimit ?? 12);
+          Dashboard.hideLoadingMsg();
+        });
+      }
+
+      if (window.$) {
+        $('#ActorPlusConfigPage').on('pageshow', function () {
+          loadConfig();
+        });
+
+        $('#ActorPlusConfigForm').on('submit', function () {
+          Dashboard.showLoadingMsg();
+          ApiClient.getPluginConfiguration(ActorPlusConfig.pluginUniqueId).then(function (config) {
+            config.EnableOverlay = document.getElementById('EnableOverlay').checked;
+            config.InjectWebClientAssets = document.getElementById('InjectWebClientAssets').checked;
+            config.UseTmdbFallback = document.getElementById('UseTmdbFallback').checked;
+            config.TmdbApiKey = document.getElementById('TmdbApiKey').value || '';
+            config.CacheTtlDays = parseInt(document.getElementById('CacheTtlDays').value || '30', 10);
+            config.ShowAgeAtDeath = document.getElementById('ShowAgeAtDeath').checked;
+            config.ShowDeceasedOverlay = document.getElementById('ShowDeceasedOverlay').checked;
+            config.ShowAgeAtRelease = document.getElementById('ShowAgeAtRelease').checked;
+            config.ShowAgeIcons = document.getElementById('ShowAgeIcons').checked;
+            config.ShowBirthCountryFlag = document.getElementById('ShowBirthCountryFlag').checked;
+            config.ShowBirthPlaceText = document.getElementById('ShowBirthPlaceText').checked;
+            config.EnableHoverFilmography = document.getElementById('EnableHoverFilmography').checked;
+            config.HoverFilmographyLimit = parseInt(document.getElementById('HoverFilmographyLimit').value || '12', 10);
+            config.RandomizeHoverFilmography = document.getElementById('RandomizeHoverFilmography').checked;
+            config.EnableHoverCastMenu = document.getElementById('EnableHoverCastMenu').checked;
+            config.HoverCastLimit = parseInt(document.getElementById('HoverCastLimit').value || '12', 10);
+
+            ApiClient.updatePluginConfiguration(ActorPlusConfig.pluginUniqueId, config).then(function (result) {
+              Dashboard.processPluginConfigurationUpdateResult(result);
+            });
+          });
+
+          return false;
+        });
+      } else {
+        // Fallback: if dashboard ever drops jQuery, try to load once.
+        loadConfig();
+
+        document.getElementById('ActorPlusConfigForm').addEventListener('submit', function (e) {
+          e.preventDefault();
+          Dashboard.showLoadingMsg();
+          ApiClient.getPluginConfiguration(ActorPlusConfig.pluginUniqueId).then(function (config) {
+            config.EnableOverlay = document.getElementById('EnableOverlay').checked;
+            config.InjectWebClientAssets = document.getElementById('InjectWebClientAssets').checked;
+            config.UseTmdbFallback = document.getElementById('UseTmdbFallback').checked;
+            config.TmdbApiKey = document.getElementById('TmdbApiKey').value || '';
+            config.CacheTtlDays = parseInt(document.getElementById('CacheTtlDays').value || '30', 10);
+            config.ShowAgeAtDeath = document.getElementById('ShowAgeAtDeath').checked;
+            config.ShowDeceasedOverlay = document.getElementById('ShowDeceasedOverlay').checked;
+            config.ShowAgeAtRelease = document.getElementById('ShowAgeAtRelease').checked;
+            config.ShowAgeIcons = document.getElementById('ShowAgeIcons').checked;
+            config.ShowBirthCountryFlag = document.getElementById('ShowBirthCountryFlag').checked;
+            config.ShowBirthPlaceText = document.getElementById('ShowBirthPlaceText').checked;
+            config.EnableHoverFilmography = document.getElementById('EnableHoverFilmography').checked;
+            config.HoverFilmographyLimit = parseInt(document.getElementById('HoverFilmographyLimit').value || '12', 10);
+            config.RandomizeHoverFilmography = document.getElementById('RandomizeHoverFilmography').checked;
+            config.EnableHoverCastMenu = document.getElementById('EnableHoverCastMenu').checked;
+            config.HoverCastLimit = parseInt(document.getElementById('HoverCastLimit').value || '12', 10);
+
+            ApiClient.updatePluginConfiguration(ActorPlusConfig.pluginUniqueId, config).then(function (result) {
+              Dashboard.processPluginConfigurationUpdateResult(result);
+            });
+          });
+        });
+      }
+    </script>
+  </div>
+</body>
+</html>

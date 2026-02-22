@@ -1,0 +1,375 @@
+/* ActorPlus - web UI badge */
+
+.birthage-badge {
+  position: absolute;
+  right: 4px;
+  bottom: 4px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  font-size: 12px;
+  line-height: 16px;
+  background: rgba(0, 0, 0, 0.65);
+  color: #fff;
+  z-index: 122;
+  pointer-events: none;
+  user-select: none;
+}
+
+/* Top-right age badge (current age; optionally stacked with age-at-release) */
+.birthage-release-badge {
+  position: absolute;
+  right: 4px;
+  top: 4px;
+  /* container has NO background; each line has its own badge background */
+  padding: 0;
+  border-radius: 0;
+  background: none;
+  color: #fff;
+  z-index: 122;
+  pointer-events: none;
+  user-select: none;
+
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+
+  font-size: 12px;
+  line-height: 16px;
+}
+
+.birthage-release-badge .birthage-line {
+  white-space: nowrap;
+  padding: 4px 6px;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.65);
+}
+
+.birthage-release-badge .birthage-line-secondary {
+  opacity: 0.92;
+}
+/* Birth country flag (Twemoji SVG) */
+.birthage-flag {
+  position: absolute;
+  left: 4px;
+  bottom: 4px;
+  width: 18px;
+  height: 18px;
+  padding: 2px;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.65);
+  z-index: 122;
+  pointer-events: none;
+  user-select: none;
+}
+
+.birthage-flag img {
+  width: 18px;
+  height: 18px;
+  display: block;
+}
+
+.birthage-container {
+  overflow: hidden;
+}
+
+
+/* Birthplace line (flag + text) - bottom-left */
+.birthage-birthplace {
+  position: absolute;
+  left: 4px;
+  bottom: 4px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 8px 2px 4px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.65);
+  z-index: 122;
+  pointer-events: none;
+  user-select: none;
+  max-width: calc(100% - 52px); /* leave room for the age badge on the right */
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.birthage-birthplace img {
+  width: 18px;
+  height: 18px;
+  display: block;
+  flex: 0 0 auto;
+}
+
+.birthage-birthplace-text {
+  font-size: 12px;
+  line-height: 16px;
+  color: #fff;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Deceased overlay (gray portrait) + ✝ marker (top-left) */
+.birthage-deceased-mask {
+  position: absolute;
+  inset: 0;
+  background: rgba(150, 150, 150, 0.35);
+  /* Real grayscale if the browser supports it; otherwise the gray tint still conveys the state */
+  -webkit-backdrop-filter: grayscale(1);
+  backdrop-filter: grayscale(1);
+  z-index: 110;
+  pointer-events: none;
+}
+
+.birthage-deceased {
+  position: absolute;
+  left: 4px;
+  top: 4px;
+  padding: 4px 6px;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.65);
+  color: #fff;
+  font-size: 12px;
+  line-height: 16px;
+  z-index: 122;
+  pointer-events: none;
+  user-select: none;
+}
+
+/* When birthplace line is shown, move the age badge up so elements don't overlap vertically */
+.birthage-has-birthplace > .birthage-badge {
+  bottom: 28px;
+}
+
+
+
+/* Hover filmography popup */
+
+/* ===== Hover filmography popup (with posters) ===== */
+.birthage-filmography-popup {
+  position: fixed;
+  z-index: 9999;
+  background: rgba(20, 20, 20, 0.96);
+  color: #fff;
+  border-radius: 10px;
+  padding: 10px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+  overflow: auto;
+}
+
+.birthage-filmography-header {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 8px;
+}
+
+.birthage-filmography-title {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.birthage-filmography-metaheader {
+  font-size: 12px;
+  opacity: 0.75;
+}
+
+.birthage-filmography-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.birthage-filmography-item {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  text-decoration: none;
+  color: inherit;
+  padding: 6px 6px;
+  border-radius: 8px;
+}
+
+.birthage-filmography-item:hover {
+  background: rgba(255,255,255,0.08);
+}
+
+.birthage-filmography-thumb {
+  width: 44px;
+  height: 66px;
+  flex: 0 0 auto;
+  border-radius: 6px;
+  overflow: hidden;
+  background: rgba(255,255,255,0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.birthage-filmography-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.birthage-filmography-thumb.birthage-thumb-missing::after {
+  content: "🎞️";
+  font-size: 18px;
+  opacity: 0.65;
+}
+
+.birthage-filmography-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.birthage-filmography-name {
+  font-size: 13px;
+  line-height: 1.2;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.birthage-filmography-sub {
+  font-size: 12px;
+  opacity: 0.75;
+}
+
+.birthage-filmography-empty,
+.birthage-filmography-loading {
+  font-size: 13px;
+  opacity: 0.8;
+  padding: 6px;
+}
+
+
+/* ===== Hover cast menu (poster hover) ===== */
+.birthage-cast-popup {
+  position: fixed;
+  z-index: 9999;
+  background: rgba(20, 20, 20, 0.96);
+  color: #fff;
+  border-radius: 10px;
+  padding: 10px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+  overflow: auto;
+}
+
+.birthage-cast-header {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 8px;
+}
+
+.birthage-cast-title {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.birthage-cast-metaheader {
+  font-size: 12px;
+  opacity: 0.75;
+}
+
+.birthage-cast-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.birthage-cast-item {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  text-decoration: none;
+  color: inherit;
+  padding: 6px 6px;
+  border-radius: 8px;
+}
+
+.birthage-cast-item:hover {
+  background: rgba(255,255,255,0.08);
+}
+
+.birthage-cast-thumb {
+  width: 44px;
+  height: 66px;
+  flex: 0 0 auto;
+  border-radius: 6px; /* rectangular portraits */
+  overflow: hidden;
+  background: rgba(255,255,255,0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+
+.birthage-cast-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.birthage-cast-thumb.birthage-thumb-missing::after {
+  content: "👤";
+  font-size: 16px;
+  opacity: 0.65;
+}
+
+.birthage-cast-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.birthage-cast-name {
+  font-size: 13px;
+  line-height: 1.2;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.birthage-cast-name-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.birthage-cast-name-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.birthage-cast-flag {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+  border-radius: 3px;
+}
+
+.birthage-cast-sub {
+  font-size: 12px;
+  opacity: 0.75;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.birthage-cast-empty,
+.birthage-cast-loading {
+  font-size: 13px;
+  opacity: 0.8;
+  padding: 6px;
+}

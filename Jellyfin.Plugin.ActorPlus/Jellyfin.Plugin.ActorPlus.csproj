@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <AssemblyName>Jellyfin.Plugin.ActorPlus</AssemblyName>
+    <RootNamespace>Jellyfin.Plugin.ActorPlus</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Must match Jellyfin server version; see Directory.Build.props -->
+    <PackageReference Include="Jellyfin.Controller" Version="$(JellyfinVersion)" PrivateAssets="all" ExcludeAssets="runtime" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Configuration\\configPage.html" />
+    <EmbeddedResource Include="Web\\birthage.js" />
+    <EmbeddedResource Include="Web\\birthage.css" />
+    <EmbeddedResource Include="Resources\\country_iso2_map.json" />
+  </ItemGroup>
+
+</Project>
