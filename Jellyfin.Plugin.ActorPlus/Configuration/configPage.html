@@ -119,6 +119,20 @@
             </label>
 </div>
 
+          <div class="checkboxContainer checkboxContainer-withDescripton">
+            <label class="emby-checkbox-label">
+              <input id="UseSidePositions" name="UseSidePositions" type="checkbox" is="emby-checkbox" />
+              <span>Use centered side positions for overlays (better for round portraits)</span>
+            </label>
+          </div>
+
+          <div class="checkboxContainer checkboxContainer-withDescripton">
+            <label class="emby-checkbox-label">
+              <input id="HideOverlaysUntilHover" name="HideOverlaysUntilHover" type="checkbox" is="emby-checkbox" />
+              <span>Show overlays only on hover</span>
+            </label>
+          </div>
+
           <div>
             <button is="emby-button" type="submit" class="raised button-submit block emby-button">
               <span>Save</span>
@@ -153,6 +167,8 @@
           document.getElementById('RandomizeHoverFilmography').checked = (config.RandomizeHoverFilmography ?? false);
           document.getElementById('EnableHoverCastMenu').checked = (config.EnableHoverCastMenu ?? false);
           document.getElementById('HoverCastLimit').value = (config.HoverCastLimit ?? 12);
+          document.getElementById('UseSidePositions').checked = (config.UseSidePositions ?? false);
+          document.getElementById('HideOverlaysUntilHover').checked = (config.HideOverlaysUntilHover ?? false);
           Dashboard.hideLoadingMsg();
         });
       }
@@ -181,6 +197,8 @@
             config.RandomizeHoverFilmography = document.getElementById('RandomizeHoverFilmography').checked;
             config.EnableHoverCastMenu = document.getElementById('EnableHoverCastMenu').checked;
             config.HoverCastLimit = parseInt(document.getElementById('HoverCastLimit').value || '12', 10);
+            config.UseSidePositions = document.getElementById('UseSidePositions').checked;
+            config.HideOverlaysUntilHover = document.getElementById('HideOverlaysUntilHover').checked;
 
             ApiClient.updatePluginConfiguration(ActorPlusConfig.pluginUniqueId, config).then(function (result) {
               Dashboard.processPluginConfigurationUpdateResult(result);
@@ -213,6 +231,8 @@
             config.RandomizeHoverFilmography = document.getElementById('RandomizeHoverFilmography').checked;
             config.EnableHoverCastMenu = document.getElementById('EnableHoverCastMenu').checked;
             config.HoverCastLimit = parseInt(document.getElementById('HoverCastLimit').value || '12', 10);
+            config.UseSidePositions = document.getElementById('UseSidePositions').checked;
+            config.HideOverlaysUntilHover = document.getElementById('HideOverlaysUntilHover').checked;
 
             ApiClient.updatePluginConfiguration(ActorPlusConfig.pluginUniqueId, config).then(function (result) {
               Dashboard.processPluginConfigurationUpdateResult(result);

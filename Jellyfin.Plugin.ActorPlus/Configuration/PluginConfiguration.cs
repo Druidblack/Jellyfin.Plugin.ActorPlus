@@ -90,4 +90,14 @@ public class PluginConfiguration : BasePluginConfiguration
     /// </summary>
     public int HoverCastLimit { get; set; } = 12;
 
+    /// <summary>
+    /// When enabled, move overlays from corners to the center of their respective sides (better for round portraits).
+    /// </summary>
+    public bool UseSidePositions { get; set; } = false;
+
+    /// <summary>
+    /// When enabled, overlays are hidden by default and only shown when hovering the portrait.
+    /// </summary>
+    public bool HideOverlaysUntilHover { get; set; } = false;
+
 }

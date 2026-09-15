@@ -38,6 +38,8 @@ public class BirthAgeController : ControllerBase
             HoverFilmographyLimit = cfg?.HoverFilmographyLimit ?? 12,
             EnableHoverCastMenu = cfg?.EnableHoverCastMenu ?? false,
             HoverCastLimit = cfg?.HoverCastLimit ?? 12,
+            UseSidePositions = cfg?.UseSidePositions ?? false,
+            HideOverlaysUntilHover = cfg?.HideOverlaysUntilHover ?? false,
         };
     }
 
@@ -137,6 +139,9 @@ public class BirthAgeController : ControllerBase
 
         public bool EnableHoverCastMenu { get; set; }
         public int HoverCastLimit { get; set; }
+
+        public bool UseSidePositions { get; set; }
+        public bool HideOverlaysUntilHover { get; set; }
     }
 
     public sealed class PersonAgeDto

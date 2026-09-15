@@ -118,6 +118,11 @@
   backdrop-filter: grayscale(1);
   z-index: 110;
   pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+
+.birthage-container:hover .birthage-deceased-mask {
+  opacity: 0;
 }
 
 .birthage-deceased {
@@ -133,6 +138,35 @@
   z-index: 122;
   pointer-events: none;
   user-select: none;
+}
+
+/* Side positioning for round cards */
+.birthage-side-positions .birthage-release-badge,
+.birthage-side-positions .birthage-deceased {
+  top: 50%;
+  transform: translateY(-50%);
+}
+.birthage-side-positions .birthage-flag,
+.birthage-side-positions .birthage-birthplace {
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+/* Hover-only visibility */
+.birthage-hover-only .birthage-release-badge,
+.birthage-hover-only .birthage-flag,
+.birthage-hover-only .birthage-birthplace,
+.birthage-hover-only .birthage-deceased {
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.2s ease, visibility 0.2s ease;
+}
+.birthage-container:hover .birthage-release-badge,
+.birthage-container:hover .birthage-flag,
+.birthage-container:hover .birthage-birthplace,
+.birthage-container:hover .birthage-deceased {
+  opacity: 1;
+  visibility: visible;
 }
 
 /* When birthplace line is shown, move the age badge up so elements don't overlap vertically */

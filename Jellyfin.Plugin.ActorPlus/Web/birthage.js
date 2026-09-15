@@ -59,6 +59,8 @@
   let randomizeHoverFilmography = false;
   let enableHoverCastMenu = false;
   let hoverCastLimit = 12;
+  let useSidePositions = false;
+  let hideOverlaysUntilHover = false;
   let statusLoadedAt = 0;
   const STATUS_TTL_MS = 10000;
 
@@ -475,6 +477,12 @@
   function applyBadgesToElement(el, id) {
     if (!el || !id) return;
 
+    if (useSidePositions) el.classList.add('birthage-side-positions');
+    else el.classList.remove('birthage-side-positions');
+
+    if (hideOverlaysUntilHover) el.classList.add('birthage-hover-only');
+    else el.classList.remove('birthage-hover-only');
+
     // Top-right: always show CURRENT age.
     // If "Show age at release" is enabled and context date is known, show age-at-release ABOVE the current age.
     const current = ageCache.get(id);
@@ -740,6 +748,8 @@ function resetContextForRoute() {
         const hfr = json ? (json.RandomizeHoverFilmography ?? json.randomizeHoverFilmography) : null;
         const hcm = json ? (json.EnableHoverCastMenu ?? json.enableHoverCastMenu) : null;
         const hcl = json ? (json.HoverCastLimit ?? json.hoverCastLimit) : null;
+        const usp = json ? (json.UseSidePositions ?? json.useSidePositions) : null;
+        const hou = json ? (json.HideOverlaysUntilHover ?? json.hideOverlaysUntilHover) : null;
         enabled = !!flag;
         showAgeAtRelease = (rel === null || rel === undefined) ? true : !!rel;
         showAgeIcons = (ico === null || ico === undefined) ? false : !!ico;
@@ -751,6 +761,8 @@ function resetContextForRoute() {
         randomizeHoverFilmography = (hfr === null || hfr === undefined) ? false : !!hfr;
         enableHoverCastMenu = (hcm === null || hcm === undefined) ? false : !!hcm;
         hoverCastLimit = (hcl === null || hcl === undefined) ? 12 : Math.max(1, Math.min(100, parseInt(hcl, 10) || 12));
+        useSidePositions = (usp === null || usp === undefined) ? false : !!usp;
+        hideOverlaysUntilHover = (hou === null || hou === undefined) ? false : !!hou;
         statusLoadedAt = Date.now();
         return enabled;
       } catch {
