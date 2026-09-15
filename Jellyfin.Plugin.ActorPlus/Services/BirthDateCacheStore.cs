@@ -15,6 +15,7 @@ public sealed class BirthDateCacheStore
     private readonly string _cacheFilePath;
     private readonly ConcurrentDictionary<Guid, CacheEntry> _cache = new();
     private int _loaded;
+    private long _revision = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 
     private readonly object _saveTimerLock = new();
     private readonly SemaphoreSlim _saveGate = new(1, 1);
@@ -63,9 +64,53 @@ public sealed class BirthDateCacheStore
         }
     }
 
+    public long Revision => Interlocked.Read(ref _revision);
+
+    public void InvalidateClientCaches()
+    {
+        Interlocked.Increment(ref _revision);
+    }
+
     public bool TryGet(Guid personId, out CacheEntry entry)
     {
         return _cache.TryGetValue(personId, out entry!);
+    }
+
+    public bool Remove(Guid personId)
+    {
+        var removed = _cache.TryRemove(personId, out _);
+        if (removed)
+        {
+            QueueSave();
+        }
+
+        return removed;
+    }
+
+    public async Task ReplaceAllAsync(IReadOnlyDictionary<Guid, CacheEntry> entries, CancellationToken ct)
+    {
+        await EnsureLoadedAsync(ct).ConfigureAwait(false);
+
+        _cache.Clear();
+        foreach (var kv in entries)
+        {
+            _cache[kv.Key] = kv.Value;
+        }
+
+        // A full rebuild is a semantic cache invalidation. The web client watches
+        // this revision and immediately discards its own in-memory person cache.
+        Interlocked.Increment(ref _revision);
+        Interlocked.Exchange(ref _savePending, 0);
+
+        await _saveGate.WaitAsync(ct).ConfigureAwait(false);
+        try
+        {
+            await SaveAsync(ct).ConfigureAwait(false);
+        }
+        finally
+        {
+            _saveGate.Release();
+        }
     }
 
     public void Set(Guid personId, CacheEntry entry)

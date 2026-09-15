@@ -10,8 +10,8 @@ public class PluginConfiguration : BasePluginConfiguration
     public bool EnableOverlay { get; set; } = true;
 
     /// <summary>
-    /// Try to inject plugin JS/CSS into Jellyfin Web's index.html on server start.
-    /// If Jellyfin web folder is read-only, injection will fail (overlay won't show) but API still works.
+    /// Register the Actor Plus JS/CSS injection through the File Transformation plugin.
+    /// Jellyfin 12 requires File Transformation 3.0.0.0 or newer for this integration.
     /// </summary>
     public bool InjectWebClientAssets { get; set; } = true;
 

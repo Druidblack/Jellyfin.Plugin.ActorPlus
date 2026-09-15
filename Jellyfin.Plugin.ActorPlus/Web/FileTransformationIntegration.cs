@@ -2,165 +2,136 @@ using System;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.Loader;
+using System.Text.Json;
 using Microsoft.Extensions.Logging;
 
 namespace Jellyfin.Plugin.ActorPlus.Web;
 
 /// <summary>
-/// Registers an in-memory transformation for <c>jellyfin-web/index.html</c> via
-/// <c>jellyfin-plugin-file-transformation</c>.
+/// Registers Actor Plus web-client patches with the File Transformation plugin.
 ///
-/// This avoids writing to <c>/usr/share/jellyfin/web/index.html</c> (which fails when Jellyfin
-/// runs under a non-root account).
+/// File Transformation runs in a separate AssemblyLoadContext, so Actor Plus must not
+/// reference its types directly. Registration is performed through the plugin's public
+/// reflection API and the payload object is created using File Transformation's own
+/// Newtonsoft.Json JObject type.
 /// </summary>
 internal static class FileTransformationIntegration
 {
     private const string FileTransformationAssemblyName = "Jellyfin.Plugin.FileTransformation";
-    private const string FileTransformationPluginTypeName = "Jellyfin.Plugin.FileTransformation.FileTransformationPlugin";
+    private const string PluginInterfaceTypeName = "Jellyfin.Plugin.FileTransformation.PluginInterface";
+    private const string RegisterMethodName = "RegisterTransformation";
 
-    private const string WebWriteServiceTypeName = "Jellyfin.Plugin.FileTransformation.Library.IWebFileTransformationWriteService";
-    private const string TransformFileDelegateTypeName = "Jellyfin.Plugin.FileTransformation.Library.TransformFile";
-
-    public static bool TryRegisterIndexHtmlTransformation(Guid transformationId, IServiceProvider serviceProvider, ILogger logger)
+    public static bool TryRegisterIndexHtmlTransformation(Guid transformationId, ILogger logger)
     {
         try
         {
-            var ftAssembly = FindFileTransformationAssembly();
-
-            var writeServiceType = ftAssembly?.GetType(WebWriteServiceTypeName, throwOnError: false, ignoreCase: false)
-                                   ?? GetTypeFromLoadedAssemblies(WebWriteServiceTypeName, FileTransformationAssemblyName);
-            var transformDelegateType = ftAssembly?.GetType(TransformFileDelegateTypeName, throwOnError: false, ignoreCase: false)
-                                      ?? GetTypeFromLoadedAssemblies(TransformFileDelegateTypeName, FileTransformationAssemblyName);
-
-            if (writeServiceType is null || transformDelegateType is null)
-            {
-                logger.LogInformation(
-                    "ActorPlus: File Transformation plugin is not installed; Web UI enhancements are disabled. " +
-                    "Install 'jellyfin-plugin-file-transformation' to enable in-memory index.html modifications.");
-                return false;
-            }
-
-            var writeService = serviceProvider.GetService(writeServiceType);
-            if (writeService is null)
+            Assembly? fileTransformationAssembly = FindFileTransformationAssembly();
+            if (fileTransformationAssembly is null)
             {
                 logger.LogWarning(
-                    "ActorPlus: File Transformation types found, but IWebFileTransformationWriteService is not available from the host container. " +
-                    "This usually indicates an AssemblyLoadContext type mismatch or an incompatible File Transformation plugin build. " +
-                    "Web UI enhancements are disabled.");
+                    "ActorPlus: File Transformation was not found. Install File Transformation 3.0.0.0 or newer and restart Jellyfin to enable Actor Plus web overlays.");
                 return false;
             }
 
-            var method = typeof(WebUiStreamTransformer).GetMethod(
-                nameof(WebUiStreamTransformer.TransformIndexHtmlStream),
+            Type? pluginInterfaceType = fileTransformationAssembly.GetType(
+                PluginInterfaceTypeName,
+                throwOnError: false,
+                ignoreCase: false);
+            if (pluginInterfaceType is null)
+            {
+                logger.LogWarning(
+                    "ActorPlus: File Transformation assembly {Version} does not expose {PluginInterface}; web overlays are disabled.",
+                    fileTransformationAssembly.GetName().Version,
+                    PluginInterfaceTypeName);
+                return false;
+            }
+
+            MethodInfo? registerMethod = pluginInterfaceType.GetMethod(
+                RegisterMethodName,
                 BindingFlags.Public | BindingFlags.Static);
-
-            if (method is null)
+            if (registerMethod is null)
             {
-                logger.LogWarning("ActorPlus: WebUiStreamTransformer.TransformIndexHtmlStream not found; Web UI enhancements are disabled.");
+                logger.LogWarning(
+                    "ActorPlus: File Transformation {Version} does not expose PluginInterface.RegisterTransformation; web overlays are disabled.",
+                    fileTransformationAssembly.GetName().Version);
                 return false;
             }
 
-            var transformDelegate = Delegate.CreateDelegate(transformDelegateType, method);
-
-            var update = writeServiceType.GetMethod("UpdateTransformation", BindingFlags.Public | BindingFlags.Instance);
-            if (update is not null)
+            ParameterInfo[] parameters = registerMethod.GetParameters();
+            if (parameters.Length != 1)
             {
-                update.Invoke(writeService, new object[] { transformationId, "index.html", transformDelegate });
-            }
-            else
-            {
-                var add = writeServiceType.GetMethod("AddTransformation", BindingFlags.Public | BindingFlags.Instance);
-                add?.Invoke(writeService, new object[] { transformationId, "index.html", transformDelegate });
+                logger.LogWarning(
+                    "ActorPlus: unsupported File Transformation RegisterTransformation signature ({ParameterCount} parameters).",
+                    parameters.Length);
+                return false;
             }
 
-            logger.LogInformation("ActorPlus: registered in-memory index.html transformation via File Transformation plugin.");
+            Type payloadType = parameters[0].ParameterType;
+            MethodInfo? parseMethod = payloadType.GetMethod(
+                "Parse",
+                BindingFlags.Public | BindingFlags.Static,
+                binder: null,
+                types: new[] { typeof(string) },
+                modifiers: null);
+            if (parseMethod is null)
+            {
+                logger.LogWarning(
+                    "ActorPlus: could not create a File Transformation registration payload of type {PayloadType}.",
+                    payloadType.FullName);
+                return false;
+            }
+
+            var registration = new
+            {
+                id = transformationId.ToString(),
+                fileNamePattern = "index.html",
+                callbackAssembly = typeof(ActorPlusTransformationPatches).Assembly.FullName,
+                callbackClass = typeof(ActorPlusTransformationPatches).FullName,
+                callbackMethod = nameof(ActorPlusTransformationPatches.IndexHtml)
+            };
+
+            string json = JsonSerializer.Serialize(registration);
+            object? payload = parseMethod.Invoke(null, new object[] { json });
+            if (payload is null)
+            {
+                logger.LogWarning("ActorPlus: File Transformation registration payload could not be created.");
+                return false;
+            }
+
+            object? result = registerMethod.Invoke(null, new[] { payload });
+            if (result is bool registered && !registered)
+            {
+                logger.LogWarning("ActorPlus: File Transformation rejected the index.html transformation registration.");
+                return false;
+            }
+
+            logger.LogInformation(
+                "ActorPlus: registered index.html transformation with File Transformation {Version}.",
+                fileTransformationAssembly.GetName().Version);
             return true;
+        }
+        catch (TargetInvocationException ex)
+        {
+            logger.LogError(
+                ex.InnerException ?? ex,
+                "ActorPlus: File Transformation threw an error while registering the index.html transformation.");
+            return false;
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "ActorPlus: failed to register index.html transformation via File Transformation plugin.");
+            logger.LogError(ex, "ActorPlus: failed to register the index.html transformation with File Transformation.");
             return false;
         }
     }
 
-    public static void TryUnregisterIndexHtmlTransformation(Guid transformationId, IServiceProvider serviceProvider, ILogger logger)
-    {
-        try
-        {
-            var writeServiceType = GetTypeFromLoadedAssemblies(WebWriteServiceTypeName, FileTransformationAssemblyName);
-            if (writeServiceType is null)
-            {
-                return;
-            }
-
-            var writeService = serviceProvider.GetService(writeServiceType);
-            if (writeService is null)
-            {
-                return;
-            }
-
-            var remove = writeServiceType.GetMethod("RemoveTransformation", BindingFlags.Public | BindingFlags.Instance);
-            remove?.Invoke(writeService, new object[] { transformationId });
-        }
-        catch (Exception ex)
-        {
-            logger.LogDebug(ex, "ActorPlus: failed to unregister index.html transformation (non-fatal). ");
-        }
-    }
-
-    private static Type? GetTypeFromLoadedAssemblies(string fullName, string assemblyName)
-    {
-        foreach (var asm in AppDomain.CurrentDomain.GetAssemblies())
-        {
-            if (!string.Equals(asm.GetName().Name, assemblyName, StringComparison.OrdinalIgnoreCase))
-            {
-                continue;
-            }
-
-            var t = asm.GetType(fullName, throwOnError: false, ignoreCase: false);
-            if (t is not null)
-            {
-                return t;
-            }
-        }
-
-        return null;
-    }
-
     private static Assembly? FindFileTransformationAssembly()
     {
-        try
-        {
-            foreach (var alc in AssemblyLoadContext.All)
-            {
-                foreach (var asm in alc.Assemblies)
-                {
-                    if (!string.Equals(asm.GetName().Name, FileTransformationAssemblyName, StringComparison.OrdinalIgnoreCase))
-                    {
-                        continue;
-                    }
-
-                    var pluginType = asm.GetType(FileTransformationPluginTypeName, throwOnError: false, ignoreCase: false);
-                    if (pluginType is null)
-                    {
-                        continue;
-                    }
-
-                    var instanceProp = pluginType.GetProperty("Instance", BindingFlags.Public | BindingFlags.Static);
-                    var instance = instanceProp?.GetValue(null);
-                    if (instance is not null)
-                    {
-                        return asm;
-                    }
-                }
-            }
-        }
-        catch
-        {
-            // ignore and fall back
-        }
-
-        return AppDomain.CurrentDomain.GetAssemblies()
-            .FirstOrDefault(a => string.Equals(a.GetName().Name, FileTransformationAssemblyName, StringComparison.OrdinalIgnoreCase));
+        return AssemblyLoadContext.All
+            .SelectMany(context => context.Assemblies)
+            .FirstOrDefault(assembly =>
+                string.Equals(assembly.GetName().Name, FileTransformationAssemblyName, StringComparison.OrdinalIgnoreCase))
+            ?? AppDomain.CurrentDomain.GetAssemblies()
+                .FirstOrDefault(assembly =>
+                    string.Equals(assembly.GetName().Name, FileTransformationAssemblyName, StringComparison.OrdinalIgnoreCase));
     }
 }

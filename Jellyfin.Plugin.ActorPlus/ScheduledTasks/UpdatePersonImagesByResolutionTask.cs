@@ -98,7 +98,7 @@ public sealed class UpdatePersonImagesByResolutionTask : IScheduledTask
                     ImageType = ImageType.Primary
                 };
 
-                // Jellyfin ProviderManager API (10.11+) uses the 3-arg overload.
+                // Jellyfin 12 ProviderManager API uses the 3-arg overload.
                 remoteImages = (await _providerManager.GetAvailableRemoteImages(person, query, cancellationToken)
                     .ConfigureAwait(false)).ToList();
             }
@@ -168,77 +168,15 @@ public sealed class UpdatePersonImagesByResolutionTask : IScheduledTask
     {
         try
         {
-            // 1) Persist the item (some Jellyfin builds update ImageTags only after an item save).
-            // Use reflection to avoid tight coupling to internal signatures.
-            var personObj = (object)person;
-            var t = personObj.GetType();
-
-            // Common signature: UpdateToRepositoryAsync(ItemUpdateType updateType, CancellationToken ct)
-            var m1 = t.GetMethod("UpdateToRepositoryAsync", new[] { typeof(ItemUpdateType), typeof(CancellationToken) });
-            if (m1 is not null)
-            {
-                var task = (Task?)m1.Invoke(personObj, new object[] { ItemUpdateType.ImageUpdate, cancellationToken });
-                if (task is not null) await task.ConfigureAwait(false);
-            }
-            else
-            {
-                // Alternate signature: UpdateToRepositoryAsync(CancellationToken ct)
-                var m2 = t.GetMethod("UpdateToRepositoryAsync", new[] { typeof(CancellationToken) });
-                if (m2 is not null)
-                {
-                    var task = (Task?)m2.Invoke(personObj, new object[] { cancellationToken });
-                    if (task is not null) await task.ConfigureAwait(false);
-                }
-            }
+            // Jellyfin 12 exposes BaseItem.UpdateToRepositoryAsync directly.
+            // ItemUpdateType.ImageUpdate makes LibraryManager refresh/persist image metadata
+            // and raises the ItemUpdated event so connected clients receive the new image tag.
+            await person.UpdateToRepositoryAsync(ItemUpdateType.ImageUpdate, cancellationToken).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
-            _logger.LogDebug(ex, "Non-fatal: failed to persist person {Name} after image save", person.Name);
-        }
-
-        try
-        {
-            // 2) Notify library manager about image update so connected clients refresh their cached image tags.
-            // Reflection again: signatures differ across Jellyfin versions.
-            var lmObj = (object)_libraryManager;
-            var lmType = lmObj.GetType();
-
-            // Try: UpdateItem(BaseItem item, BaseItem? parent, ItemUpdateType updateType, bool? notify)
-            // or variants without parent/notify.
-            var methods = lmType.GetMethods().Where(m => m.Name == "UpdateItem").ToArray();
-            foreach (var m in methods)
-            {
-                var p = m.GetParameters();
-                try
-                {
-                    if (p.Length == 3 && p[0].ParameterType.IsAssignableFrom(typeof(BaseItem)) && p[2].ParameterType == typeof(ItemUpdateType))
-                    {
-                        m.Invoke(lmObj, new object?[] { person, null, ItemUpdateType.ImageUpdate });
-                        return;
-                    }
-
-                    if (p.Length == 2 && p[0].ParameterType.IsAssignableFrom(typeof(BaseItem)) && p[1].ParameterType == typeof(ItemUpdateType))
-                    {
-                        m.Invoke(lmObj, new object?[] { person, ItemUpdateType.ImageUpdate });
-                        return;
-                    }
-
-                    if (p.Length == 4 && p[0].ParameterType.IsAssignableFrom(typeof(BaseItem)) && p[2].ParameterType == typeof(ItemUpdateType))
-                    {
-                        // (BaseItem item, BaseItem? parent, ItemUpdateType updateType, bool notify)
-                        m.Invoke(lmObj, new object?[] { person, null, ItemUpdateType.ImageUpdate, true });
-                        return;
-                    }
-                }
-                catch
-                {
-                    // try next overload
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger.LogDebug(ex, "Non-fatal: failed to notify library manager after image save for {Name}", person.Name);
+            _logger.LogWarning(ex, "Failed to persist/notify image update for person {Name} ({Id})", person.Name, person.Id);
         }
     }
+
 }

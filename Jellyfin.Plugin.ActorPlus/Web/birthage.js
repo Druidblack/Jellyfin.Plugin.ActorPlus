@@ -63,9 +63,12 @@
   let hideOverlaysUntilHover = false;
   let statusLoadedAt = 0;
   const STATUS_TTL_MS = 10000;
+  let cacheRevision = null;
 
-  // Person metadata TTL (60 minutes)
-  const DATA_TTL_MS = 60 * 60 * 1000;
+  // Person metadata TTL. Keep this reasonably short so manual Jellyfin metadata edits
+  // become visible without requiring a browser reload. Full ActorPlus cache rebuilds
+  // invalidate this client cache immediately via CacheRevision below.
+  const DATA_TTL_MS = 5 * 60 * 1000;
   const dataLoadedAt = new Map(); // id -> timestamp
 
   // Twemoji flag SVG base (same idea as multi_tag.js)
@@ -217,7 +220,7 @@
 
     // Fallback: some themes/components add an explicit person class.
     const cls = String(a.className || '');
-    if (/personCard/i.test(cls)) return true;
+    if (/\bpersonCard\b/i.test(cls)) return true;
 
     return false;
   }
@@ -738,6 +741,16 @@ function resetContextForRoute() {
       await Promise.all(Array.from({ length: n }, () => worker()));
     }
 
+    function clearPersonDataCaches() {
+      ageCache.clear();
+      birthDateCache.clear();
+      birthCountryIso2Cache.clear();
+      birthPlaceCache.clear();
+      deceasedCache.clear();
+      dataLoadedAt.clear();
+      queued.clear();
+    }
+
     async function loadStatus() {
       if (enabled !== null && (Date.now() - statusLoadedAt) < STATUS_TTL_MS) return enabled;
       try {
@@ -759,6 +772,14 @@ function resetContextForRoute() {
         const hcl = json ? (json.HoverCastLimit ?? json.hoverCastLimit) : null;
         const usp = json ? (json.UseSidePositions ?? json.useSidePositions) : null;
         const hou = json ? (json.HideOverlaysUntilHover ?? json.hideOverlaysUntilHover) : null;
+        const revRaw = json ? (json.CacheRevision ?? json.cacheRevision) : null;
+        const rev = (revRaw === null || revRaw === undefined) ? null : String(revRaw);
+        if (cacheRevision !== null && rev !== null && rev !== cacheRevision) {
+          clearPersonDataCaches();
+          // Repaint visible cards using the newly rebuilt server cache.
+          setTimeout(() => scheduleScan(document, true), 0);
+        }
+        if (rev !== null) cacheRevision = rev;
         enabled = !!flag;
         showAgeAtRelease = (rel === null || rel === undefined) ? true : !!rel;
         showAgeIcons = (ico === null || ico === undefined) ? false : !!ico;
@@ -1779,6 +1800,13 @@ async function init() {
 
       // Periodic cache pruning (every 5 minutes) to prevent memory growth
       setInterval(() => pruneCaches(), 300000);
+
+      // Detect a server-side full cache rebuild. The status endpoint is tiny and its own
+      // 10-second TTL prevents excessive requests. A changed CacheRevision clears the
+      // browser cache and schedules an immediate repaint.
+      setInterval(() => {
+        loadStatus().catch(() => {});
+      }, 15000);
 
       // Scroll-debounced rescan (quick feedback)
       window.addEventListener('scroll', () => {

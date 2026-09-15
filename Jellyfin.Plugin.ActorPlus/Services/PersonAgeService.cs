@@ -52,6 +52,59 @@ public sealed class PersonAgeService
 
             if (!expired)
             {
+                // Jellyfin-sourced entries must never become permanent snapshots. A user may
+                // edit a person's birth date/place directly in Jellyfin, so compare the cached
+                // values with the current local Person metadata before returning them. This is
+                // local database work only; no remote provider is contacted here.
+                if (string.Equals(cached.Source, "jellyfin", StringComparison.OrdinalIgnoreCase))
+                {
+                    var liveItem = _libraryManager.GetItemById(personId);
+                    if (liveItem is not Person livePerson)
+                    {
+                        _cache.Remove(personId);
+                        _cache.InvalidateClientCaches();
+                        goto LoadLiveMetadata;
+                    }
+
+                    {
+                        var liveBirth = TryGetPersonBirthDate(livePerson);
+                        var liveDeath = TryGetPersonDeathDate(livePerson);
+                        var livePlace = TryGetPersonBirthPlace(livePerson);
+                        var liveIso2 = _countryCodeMapper.BirthPlaceToIso2(livePlace);
+
+                        if (liveBirth == null && liveDeath == null && string.IsNullOrWhiteSpace(livePlace))
+                        {
+                            // Metadata was cleared in Jellyfin. Remove the stale cache entry and
+                            // continue below so the optional TMDB fallback can still be used.
+                            _cache.Remove(personId);
+                            _cache.InvalidateClientCaches();
+                            goto LoadLiveMetadata;
+                        }
+                        else
+                        {
+                            var liveEntry = new BirthDateCacheStore.CacheEntry
+                            {
+                                BirthDate = liveBirth?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
+                                DeathDate = liveDeath?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
+                                BirthPlace = livePlace,
+                                BirthCountryIso2 = liveIso2,
+                                UpdatedUtc = cached.UpdatedUtc,
+                                Source = "jellyfin",
+                            };
+
+                            if (!CacheEntriesEqual(cached, liveEntry))
+                            {
+                                liveEntry = liveEntry with { UpdatedUtc = DateTimeOffset.UtcNow };
+                                _cache.Set(personId, liveEntry);
+                                _cache.InvalidateClientCaches();
+                                cached = liveEntry;
+                            }
+
+                            return BuildAgeInfo(personId, cached, nowDate, cacheHit: true);
+                        }
+                    }
+                }
+
                 // Cache enrichment: older cache entries may not have birthplace / ISO2 yet.
                 // If the flag feature is enabled and the cache lacks country data, try to fill it from Jellyfin metadata
                 // (or TMDB fallback if configured). This mirrors the "open actor page" behavior without forcing users to do it.
@@ -121,6 +174,7 @@ public sealed class PersonAgeService
         }
 
         // 2) Jellyfin person metadata
+LoadLiveMetadata:
         var item = _libraryManager.GetItemById(personId);
         if (item is not Person person)
         {
@@ -202,6 +256,15 @@ public sealed class PersonAgeService
         }
 
         return dict;
+    }
+
+    private static bool CacheEntriesEqual(BirthDateCacheStore.CacheEntry left, BirthDateCacheStore.CacheEntry right)
+    {
+        return string.Equals(left.BirthDate, right.BirthDate, StringComparison.Ordinal)
+            && string.Equals(left.DeathDate, right.DeathDate, StringComparison.Ordinal)
+            && string.Equals(left.BirthPlace, right.BirthPlace, StringComparison.Ordinal)
+            && string.Equals(left.BirthCountryIso2, right.BirthCountryIso2, StringComparison.OrdinalIgnoreCase)
+            && string.Equals(left.Source, right.Source, StringComparison.OrdinalIgnoreCase);
     }
 
     private AgeInfo BuildAgeInfo(Guid personId, BirthDateCacheStore.CacheEntry entry, DateOnly now, bool cacheHit)

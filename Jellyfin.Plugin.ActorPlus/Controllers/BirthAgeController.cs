@@ -14,10 +14,12 @@ namespace Jellyfin.Plugin.ActorPlus.Controllers;
 public class BirthAgeController : ControllerBase
 {
     private readonly PersonAgeService _ageService;
+    private readonly BirthDateCacheStore _cacheStore;
 
-    public BirthAgeController(PersonAgeService ageService)
+    public BirthAgeController(PersonAgeService ageService, BirthDateCacheStore cacheStore)
     {
         _ageService = ageService;
+        _cacheStore = cacheStore;
     }
 
     [HttpGet("status")]
@@ -40,6 +42,7 @@ public class BirthAgeController : ControllerBase
             HoverCastLimit = cfg?.HoverCastLimit ?? 12,
             UseSidePositions = cfg?.UseSidePositions ?? false,
             HideOverlaysUntilHover = cfg?.HideOverlaysUntilHover ?? false,
+            CacheRevision = _cacheStore.Revision,
         };
     }
 
@@ -142,6 +145,7 @@ public class BirthAgeController : ControllerBase
 
         public bool UseSidePositions { get; set; }
         public bool HideOverlaysUntilHover { get; set; }
+        public long CacheRevision { get; set; }
     }
 
     public sealed class PersonAgeDto

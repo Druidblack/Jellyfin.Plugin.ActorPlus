@@ -73,7 +73,7 @@ public sealed class RefreshPersonMetadataTask : IScheduledTask
             return;
         }
 
-        _logger.LogInformation("[ActorPlus] RefreshPersonMetadataTask: найдено актёров: {Count}", people.Count);
+        _logger.LogInformation("[ActorPlus] RefreshPersonMetadataTask: people found: {Count}", people.Count);
 
         // This is how Jellyfin internally builds refresh options for API refresh calls.
         // We keep it resilient across server versions by setting additional fields via reflection.
@@ -91,8 +91,10 @@ public sealed class RefreshPersonMetadataTask : IScheduledTask
                 // Forces metadata refresh. This is the same method used by Jellyfin for other refresh workflows.
                 await person.RefreshMetadata(refreshOptions, cancellationToken).ConfigureAwait(false);
 
-                // After refresh, update plugin cache so overlays pick up new data immediately.
-                UpdateCacheEntryFromPerson(person);
+                // Re-read the Person from Jellyfin after the provider refresh, then update the
+                // ActorPlus cache from the value that is actually stored in the library.
+                var refreshedPerson = _libraryManager.GetItemById(person.Id) as Person ?? person;
+                UpdateCacheEntryFromPerson(refreshedPerson);
             }
             catch (OperationCanceledException)
             {
@@ -100,13 +102,15 @@ public sealed class RefreshPersonMetadataTask : IScheduledTask
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "[ActorPlus] RefreshPersonMetadataTask: ошибка обновления метаданных для {Name} ({Id})", person.Name, person.Id);
+                _logger.LogWarning(ex, "[ActorPlus] RefreshPersonMetadataTask: failed to refresh metadata for {Name} ({Id})", person.Name, person.Id);
             }
 
             progress.Report((i + 1) * 100.0 / people.Count);
         }
 
-        _logger.LogInformation("[ActorPlus] RefreshPersonMetadataTask: завершено");
+        await _cacheStore.SaveAsync(cancellationToken).ConfigureAwait(false);
+        _cacheStore.InvalidateClientCaches();
+        _logger.LogInformation("[ActorPlus] RefreshPersonMetadataTask: completed");
     }
 
     private void ConfigureRefreshOptions(object refreshOptions)
@@ -205,6 +209,8 @@ public sealed class RefreshPersonMetadataTask : IScheduledTask
 
             if (birth == null && death == null && string.IsNullOrWhiteSpace(birthPlace))
             {
+                // Metadata may have been deliberately cleared. Do not keep stale ActorPlus data.
+                _cacheStore.Remove(person.Id);
                 return;
             }
 
