@@ -23,7 +23,7 @@ public class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages
     public override string Name => PluginName;
 
     // IMPORTANT: keep stable; this is used by the dashboard config page.
-    public override Guid Id => Guid.Parse("d47f75a1-2c4c-4aa1-a1cd-5da6e5e6ccfd");
+    public override Guid Id => Guid.Parse("cd3c40dc-2a2e-4ad7-bc0a-b9be6b6d3a08");
 
     public IEnumerable<PluginPageInfo> GetPages()
     {

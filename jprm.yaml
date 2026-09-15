@@ -1,0 +1,8 @@
+name: "ActorPlus"
+guid: "cd3c40dc-2a2e-4ad7-bc0a-b9be6b6d3a08"
+category: "General"
+description: "Enhanced actor information, birth dates, and filmography overlays for the Jellyfin web client."
+overview: "The plugin adds additional information to the actor's portrait and, when hovering over it with the cursor, the filmography."
+owner: "adripo"
+sourceUrl: "https://github.com/adripo/Jellyfin.Plugin.ActorPlus"
+imageUrl: "https://raw.githubusercontent.com/adripo/Jellyfin.Plugin.ActorPlus/main/images/logo.jpg"

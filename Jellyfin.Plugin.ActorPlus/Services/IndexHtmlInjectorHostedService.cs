@@ -43,7 +43,7 @@ public sealed class IndexHtmlInjectorHostedService : IHostedService
 
             // Preferred: in-memory transformation via jellyfin-plugin-file-transformation.
             // This avoids writing to /usr/share/jellyfin/web/index.html (fails when running Jellyfin as non-root).
-            var transformationId = Plugin.Instance?.Id ?? Guid.Parse("d47f75a1-2c4c-4aa1-a1cd-5da6e5e6ccfd");
+            var transformationId = Plugin.Instance?.Id ?? Guid.Parse("cd3c40dc-2a2e-4ad7-bc0a-b9be6b6d3a08");
             if (FileTransformationIntegration.TryRegisterIndexHtmlTransformation(transformationId, _serviceProvider, _logger))
             {
                 return Task.CompletedTask;
@@ -111,7 +111,7 @@ public sealed class IndexHtmlInjectorHostedService : IHostedService
     {
         try
         {
-            var transformationId = Plugin.Instance?.Id ?? Guid.Parse("d47f75a1-2c4c-4aa1-a1cd-5da6e5e6ccfd");
+            var transformationId = Plugin.Instance?.Id ?? Guid.Parse("cd3c40dc-2a2e-4ad7-bc0a-b9be6b6d3a08");
             FileTransformationIntegration.TryUnregisterIndexHtmlTransformation(transformationId, _serviceProvider, _logger);
         }
         catch

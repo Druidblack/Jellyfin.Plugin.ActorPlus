@@ -64,6 +64,10 @@
   let statusLoadedAt = 0;
   const STATUS_TTL_MS = 10000;
 
+  // Person metadata TTL (60 minutes)
+  const DATA_TTL_MS = 60 * 60 * 1000;
+  const dataLoadedAt = new Map(); // id -> timestamp
+
   // Twemoji flag SVG base (same idea as multi_tag.js)
   const TWEMOJI_FLAG_BASE = 'https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/svg/';
   const twemojiUrlCache = new Map();
@@ -89,6 +93,11 @@
   let scrollTimer = null;
 
   // ===== Helpers =====
+  function isPersonCached(id) {
+    if (!dataLoadedAt.has(id)) return false;
+    return (Date.now() - dataLoadedAt.get(id)) < DATA_TTL_MS;
+  }
+
   function normalizeId(id) {
     return String(id || '').toLowerCase().replace(/-/g, '');
   }
@@ -772,16 +781,33 @@ function resetContextForRoute() {
       }
     }
 
+    function pruneCaches() {
+      const now = Date.now();
+      for (const [id, ts] of dataLoadedAt.entries()) {
+        if ((now - ts) > DATA_TTL_MS) {
+          dataLoadedAt.delete(id);
+          ageCache.delete(id);
+          birthDateCache.delete(id);
+          birthCountryIso2Cache.delete(id);
+          birthPlaceCache.delete(id);
+          deceasedCache.delete(id);
+        }
+      }
+    }
+
     function queueFetch(id) {
       if (!id) return;
 
+      // Check TTL: if data is stale, we must re-fetch.
+      const isCached = isPersonCached(id);
+
       // Even if we already have the current-age text cached, we may still need
       // extra data (birth date for age-at-release, or country ISO2 for the flag).
-      const needAge   = !ageCache.has(id);
-      const needBirth = (showAgeAtRelease && !birthDateCache.has(id));
-      const needIso2  = (showBirthCountryFlag && !birthCountryIso2Cache.has(id));
-      const needPlace = (showBirthCountryFlag && showBirthPlaceText && !birthPlaceCache.has(id));
-      const needDec   = (showDeceasedOverlay && !deceasedCache.has(id));
+      const needAge   = !isCached || !ageCache.has(id);
+      const needBirth = !isCached || (showAgeAtRelease && !birthDateCache.has(id));
+      const needIso2  = !isCached || (showBirthCountryFlag && !birthCountryIso2Cache.has(id));
+      const needPlace = !isCached || (showBirthCountryFlag && showBirthPlaceText && !birthPlaceCache.has(id));
+      const needDec   = !isCached || (showDeceasedOverlay && !deceasedCache.has(id));
 
       if (!needAge && !needBirth && !needIso2 && !needPlace && !needDec) {
         deliver(id);
@@ -818,6 +844,9 @@ function resetContextForRoute() {
 
         for (const id of ids) {
           const rec = byId[id];
+
+          // Record fetch timestamp for TTL tracking
+          dataLoadedAt.set(id, Date.now());
 
           const birth = rec ? (rec.BirthDate ?? rec.birthDate) : null;
           if (birth) birthDateCache.set(id, String(birth).trim());
@@ -1747,6 +1776,9 @@ async function init() {
 
       // Periodic scan to handle virtualized / recycled lists (safe approach)
       setInterval(() => scheduleScan(document), PERIODIC_SCAN_MS);
+
+      // Periodic cache pruning (every 5 minutes) to prevent memory growth
+      setInterval(() => pruneCaches(), 300000);
 
       // Scroll-debounced rescan (quick feedback)
       window.addEventListener('scroll', () => {
