@@ -1,2 +1,29 @@
 [
+    {
+        "guid": "cd3c40dc-2a2e-4ad7-bc0a-b9be6b6d3a08",
+        "name": "ActorPlus",
+        "overview": "The plugin adds additional information to the actor's portrait and, when hovering over it with the cursor, the filmography. The plugin also shows a list of actors when you hover over the movie (TV series) poster.",
+        "description": "The plugin adds additional information to the actor's portrait and, when hovering over it with the cursor, the filmography. The plugin also shows a list of actors when you hover over the movie (TV series) poster.",
+        "owner": "Druidblack",
+        "category": "General",
+        "imageUrl": "https://raw.githubusercontent.com/Druidblack/Jellyfin.Plugin.ActorPlus/main/images/logo.jpg",
+        "versions": [
+            {
+                "version": "1.0.0.1",
+                "changelog": "Support Jellyfin 12 and fix",
+                "targetAbi": "12.0",
+                "sourceUrl": "https://github.com/Druidblack/Jellyfin.Plugin.ActorPlus/releases/download/v1.0.0.1/ActorPlus_1.0.0.1.zip",
+                "checksum": "f3cd9f5c11bc0900bb56f682a563fc17",
+                "timestamp": "2026-09-15T12:00:00.180Z"
+            },
+            {
+                "version": "1.0.0.0",
+                "changelog": "Release 1.0.0.0",
+                "targetAbi": "10.11.0.0",
+                "sourceUrl": "https://github.com/Druidblack/Jellyfin.Plugin.ActorPlus/releases/download/v1.0.0.0/ActorPlus_1.0.0.0.zip",
+                "checksum": "5203b5b2d7841e4a60b0c0741a880368",
+                "timestamp": "2026-04-24T21:34:02.180Z"
+            }
+        ]
+    }
 ]
